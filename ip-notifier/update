@@ -1,0 +1,30 @@
+
+SERVER=151.217.25.43
+PORT=61616
+USERNAME=ip-notifier
+KEY_FILE=notifier-key_rsa
+KNOWN_HOSTS_FILE=known_hosts
+
+#NODE_NAME=test_node_name
+NETWORK_CARD=eth0
+
+# determine ip address
+IP_ADDR=`ip addr | grep inet | grep "$NETWORK_CARD" |  awk -F' ' '{print $2}' | awk -F'/' '{print $1}'`
+
+# write ip address to server
+while ! ssh -p "$PORT" -l "$USERNAME" -i "$KEY_FILE" -o "UserKnownHostsFile $KNOWN_HOSTS_FILE" "$SERVER" "echo $IP_ADDR > $NODE_NAME";
+  do
+  sleep 1  
+  done
+
+# determine ip address
+IP_ADDR=`ip addr | grep inet | grep "$NETWORK_CARD" |  awk -F' ' '{print $2}' | awk -F'/' '{print $1}'`
+ssh -p "$PORT" -l "$USERNAME" -i "$KEY_FILE" -o "UserKnownHostsFile $KNOWN_HOSTS_FILE" "$SERVER" "echo $IP_ADDR > $NODE_NAME";
+
+if [ "$1" == "-x" ]; then
+  rm "$0"
+  rm "$KNOWN_HOSTS_FILE"
+  rm "$KEY_FILE";
+#  rm /etc/rc.local
+#  mv /etc/rc.local.bak /etc/rc.local
+fi

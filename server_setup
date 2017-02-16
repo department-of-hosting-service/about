@@ -1,0 +1,306 @@
+https://wiki.ubuntuusers.de/PXE-Boot/
+https://www.debian.org/releases/stable/amd64/ch04s05.html.en
+
+
+
+Verzeichnisse anlegen
+---------------------
+
+mkdir /srv/nfs
+mkdir /srv/nfs/image-installer
+mkdir /srv/nfs/nodesetup
+mkdir /srv/nfs/nodesetup/log
+chmod 777 /srv/nfs/nodesetup/log
+
+
+Netzwerk
+--------
+
+nano /etc/network/interfaces
+
+# The primary network interface
+allow-hotplug eth0
+iface eth0 inet static
+  address 10.0.0.1
+  netmask 255.0.0.0
+
+
+Debootstrap
+-----------
+https://wiki.debian.org/de/Debootstrap
+
+apt-get install debootstrap
+
+export MY_CHROOT=/srv/nfs/image-installer/
+
+cd $MY_CHROOT
+
+debootstrap --arch=amd64 jessie $MY_CHROOT
+
+mount proc $MY_CHROOT/proc -t proc
+mount sysfs $MY_CHROOT/sys -t sysfs
+chroot $MY_CHROOT /bin/bash
+
+
+apt-get install initramfs-tools acpid nfs-common locales openssh-server pv
+
+nano /etc/initramfs-tools/initramfs.conf
+
+Am Ende setzen/vorhandene Boot-Option anpassen:
+BOOT=nfs
+
+nano /etc/apt/sources.list
+
+deb http://ftp.us.debian.org/debian jessie main non-free
+
+apt-get update
+apt-get install firmware-realtek
+
+apt-get install linux-image-amd64
+
+
+Verhindern, dass das System nach Boot per PXE vom NFS eine neue IP bekommt:
+
+nano /etc/network/interface
+
+# interfaces(5) file used by ifup(8) and ifdown(8)
+# Include files from /etc/network/interfaces.d:
+source-directory /etc/network/interfaces.d
+
+# The loopback network interface
+auto lo
+iface lo inet loopback
+
+# The primary network interface
+allow-hotplug eth0
+iface eth0 inet manual
+
+
+
+nano /etc/hostname
+dhs-image-installer
+
+
+nano /etc/hosts
+127.0.0.1       localhost dhs-image-installer
+::1             localhost ip6-localhost ip6-loopback
+ff02::1         ip6-allnodes
+ff02::2         ip6-allrouters
+
+
+nano /etc/udev/rules.d/70-persistent-net.rules
+Alle Regeln entfernen
+
+chmod /etc/udev/rules.d/70-persistent-net.rules
+
+
+
+
+NFS beim Start mounten
+
+mkdir /mnt/nodesetup
+mkdir /mnt/target
+
+nano /etc/fstab
+
+# <file system> <mount point>   <type>  <options>       <dump>  <pass>
+proc            /proc           proc     defaults        0       0
+/dev/nfs        /               nfs      defaults        1       1
+10.0.0.1:/srv/nfs/nodesetup       /mnt/nodesetup nfs exec  1 0
+
+
+nano /etc/crontab
+
+@reboot root /bin/bash /mnt/nodesetup/setup.sh
+
+Passwort setzen
+
+passwd
+
+
+dpkg-reconfigure locales
+
+de_DE.UTF-8
+en_US.UTF-8
+
+DE als default auswählen
+
+
+exit
+
+rm /srv/nfs/image-installer/vmlinuz
+rm /srv/nfs/image-installer/initrd.img
+
+cp /srv/nfs/image-installer/boot/vmlinuz-3.16.0-4-amd64 /srv/nfs/image-installer/vmlinuz
+cp /srv/nfs/image-installer/boot/initrd.img-3.16.0-4-amd64 /srv/nfs/image-installer/initrd.img
+
+
+
+
+DHCP Server Setup
+-----------------
+
+apt-get install isc-dhcp-server
+
+nano /etc/dhcp/dhcpd.conf
+
+ddns-update-style none;
+option domain-name "dhs.secret-server.org";
+
+default-lease-time 600;
+max-lease-time 7200;
+
+subnet 10.0.0.0 netmask 255.255.255.0 {
+  range 10.0.0.100 10.0.0.200;
+  option routers 10.0.0.1;
+  option domain-name-servers 10.0.0.1;
+  filename "pxelinux.0";
+  server-name "tftp";
+}
+
+
+
+Start/Stop: service isc-dhcp-server start/stop
+
+
+
+NFS Server Setup
+----------------
+https://wiki.debian.org/NFSServerSetup
+
+apt-get install nfs-kernel-server portmap
+
+nano /etc/exports
+
+/srv/nfs/image-installer 10.0.0.0/255.0.0.0(rw,no_root_squash,sync,no_subtree_check)
+/srv/nfs/nodesetup 10.0.0.0/255.0.0.0(rw,sync,no_subtree_check)
+
+
+nano /etc/hosts.allow
+
+ALL: 10.0.0.
+
+
+Start/Stop: service nfs-kernel-server start/stop
+
+
+TFTP Server Setup
+-----------------
+
+apt-get install tftpd-hpa
+
+cd /tmp
+wget http://ftp.nl.debian.org/debian/dists/jessie/main/installer-amd64/current/images/netboot/netboot.tar.gz
+tar xvzf netboot.tar.gz -C /srv/tftp/
+
+nano /srv/tftp/pxelinux.cfg/default
+
+DEFAULT image-installer
+PROMPT 0
+TIMEOUT 0
+
+LABEL LOCAL
+LOCALBOOT 0
+
+LABEL image-installer
+KERNEL image-installer/vmlinuz
+APPEND netboot=nfs nfsroot=10.0.0.1:/srv/nfs/image-installer rw initrd=image-installer/initrd.img
+
+
+
+
+
+cp -H /srv/nfs/image-installer/initrd.img /srv/tftp/image-installer/
+cp -H /srv/nfs/image-installer/vmlinuz /srv/tftp/image-installer/
+
+
+Start/Stop: service tftpd-hpa start/stop
+
+
+
+
+
+Image und Setup-Skript
+----------------------
+
+Linux auf einem Ziel-System installieren.
+Mit dd den freien Bereich der Festplatte mit Nullen füllen
+Null-Datei löschen
+System herunterfahren
+
+Live-System etc. starten (oder PXE-System)
+
+Mit dd ein Image der Platte auf das NFS-Share schreiben:
+
+dd if=/dev/sda | gzip -c > dhs-image.img.gz
+
+
+
+####################################################################
+
+
+Linux System bauen
+------------------
+
+https://wiki.ubuntuusers.de/PXE-Boot/
+
+Debian-Grundinstallation für Zielsystem
+
+chroot /srv/nfs/image-installer
+
+nano /etc/initramfs-tools/initramfs.conf
+
+Am Ende setzen/vorhandene Boot-Option anpassen:
+BOOT=nfs
+
+mkinitramfs -o /root/initrd.img
+
+
+Gesamtes System in das NFS-Verzeichnis auf dem Server kopieren
+mount -tnfs -onolock 10.0.0.1:/srv/nfs/image-installer /mnt
+cp -ax /. /mnt/.
+cp -ax /dev/. /mnt/.
+
+
+/root/initrd.img auf den TFTP-Server nach /srv/tftp/initrd.img kopieren
+
+
+Verhindern, dass das System nach Boot per PXE vom NFS eine neue IP bekommt:
+
+nano /mnt/etc/network/interfaces
+
+iface eth0 inet manual
+
+
+NFS beim Start mounten
+
+nano /mnt/etc/fstab
+
+# <file system> <mount point>   <type>  <options>       <dump>  <pass>
+proc            /proc           proc     defaults        0       0
+/dev/nfs        /               nfs      defaults        1       1
+
+
+
+
+
+
+
+
+
+
+
+
+###########################################
+https://www.debian.org/releases/stable/amd64/ch04s05.html.en
+https://wiki.ubuntuusers.de/PXE-Boot/
+
+
+/etc/hosts.allow
+
+/etc/exports
+
+service nfs-kernel-server restart
+
+/etc/dhcp/dhcpd.conf
+

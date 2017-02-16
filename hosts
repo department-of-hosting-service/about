@@ -1,0 +1,12 @@
+HOSTNAME        MAC                 IMAGE-FILE                IP-ADDR        NETMASK        GATEWAY      BROADCAST      NAMESERVER              TARGET_DEVICE
+DHS-node-01    90:e6:ba:84:b7:f3    images/dhs-node.img.gz    192.168.0.204  255.255.255.0  192.168.0.1  192.168.0.255  192.168.0.1,8.8.8.8    /dev/sda
+DHS-node-02    90:e6:ba:84:b7:07    images/dhs-node.img.gz    192.168.0.205  255.255.255.0  192.168.0.1  192.168.0.255  192.168.0.1,8.8.8.8    /dev/sda
+DHS-node-03    90:e6:ba:84:b6:d7    images/dhs-node.img.gz    192.168.0.208  255.255.255.0  192.168.0.1  192.168.0.255  192.168.0.1,8.8.8.8    /dev/sda
+DHS-node-04    90:e6:ba:84:b5:b7    images/dhs-node.img.gz    192.168.0.209  255.255.255.0  192.168.0.1  192.168.0.255  192.168.0.1,8.8.8.8    /dev/sda
+DHS-node-05    90:e6:ba:89:ad:b3    images/dhs-node.img.gz    192.168.0.210  255.255.255.0  192.168.0.1  192.168.0.255  192.168.0.1,8.8.8.8    /dev/sda
+DHS-node-06    90:e6:ba:84:b6:72    images/dhs-node.img.gz    192.168.0.211  255.255.255.0  192.168.0.1  192.168.0.255  192.168.0.1,8.8.8.8    /dev/sda
+DHS-node-07    90:e6:ba:84:b7:66    images/dhs-node.img.gz    192.168.0.212  255.255.255.0  192.168.0.1  192.168.0.255  192.168.0.1,8.8.8.8    /dev/sda
+DHS-node-08    e0:cb:4e:2e:29:d7    images/dhs-node.img.gz    192.168.0.213  255.255.255.0  192.168.0.1  192.168.0.255  192.168.0.1,8.8.8.8    /dev/sda
+DHS-node-09    e0:cb:4e:2e:2b:8d    images/dhs-node.img.gz    192.168.0.214  255.255.255.0  192.168.0.1  192.168.0.255  192.168.0.1,8.8.8.8    /dev/sda
+DHS-node-10    90:e6:ba:84:b7:81    images/dhs-node.img.gz    192.168.0.215  255.255.255.0  192.168.0.1  192.168.0.255  192.168.0.1,8.8.8.8    /dev/sda
+
